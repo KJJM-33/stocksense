@@ -30,12 +30,12 @@ export class StockRepository {
   private client: SupabaseClient;
 
   constructor(url?: string, serviceRoleKey?: string) {
-    const resolvedUrl = url ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+    const resolvedUrl = url ?? process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
     const resolvedKey = serviceRoleKey ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
     if (!resolvedUrl || !resolvedKey) {
       throw new Error(
-        'StockRepository requires NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
+        'StockRepository requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
       );
     }
 
