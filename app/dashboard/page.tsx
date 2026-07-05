@@ -2,6 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import Nav from '@/components/Nav';
 
+export const dynamic = 'force-dynamic';
+
 const HOUSEHOLD_ID = process.env.NEXT_PUBLIC_DEFAULT_HOUSEHOLD_ID!;
 
 const LOCATIONS = [
