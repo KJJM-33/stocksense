@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 
-type NavItem = 'home' | 'stock' | 'scan';
+type NavItem = 'home' | 'stock' | 'scan' | 'receipt';
 
 const ITEMS: { id: NavItem; href: string; label: string; icon: string }[] = [
-  { id: 'home',  href: '/',           label: 'Home',  icon: '⌂'  },
-  { id: 'stock', href: '/dashboard',  label: 'Stock', icon: '≡'  },
-  { id: 'scan',  href: '/scan',       label: 'Scan',  icon: '⊡'  },
+  { id: 'home',    href: '/',          label: 'Home',    icon: '⌂' },
+  { id: 'stock',   href: '/dashboard', label: 'Stock',   icon: '≡' },
+  { id: 'scan',    href: '/scan',      label: 'Scan',    icon: '⊡' },
+  { id: 'receipt', href: '/receipt',   label: 'Receipt', icon: '🧾' },
 ];
 
 export default function Nav({ active }: { active?: NavItem }) {
