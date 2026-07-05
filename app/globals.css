@@ -1,19 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0f1117;
-  --foreground: #ffffff;
-  --status-ok: #4ade80;
+  --background: #0d0f14;
+  --foreground: #f0f0f2;
+  --status-ok:  #4ade80;
   --status-low: #fbbf24;
   --status-out: #f87171;
+  --border-subtle: rgba(255,255,255,0.07);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-status-ok: var(--status-ok);
-  --color-status-low: var(--status-low);
-  --color-status-out: var(--status-out);
+  --color-background:  var(--background);
+  --color-foreground:  var(--foreground);
+  --color-status-ok:   var(--status-ok);
+  --color-status-low:  var(--status-low);
+  --color-status-out:  var(--status-out);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -22,4 +23,15 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Smoother button taps on mobile */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
