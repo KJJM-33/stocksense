@@ -60,6 +60,17 @@ export default async function DashboardPage() {
   const totalOut = items.filter(i => i.status === 'out').length;
   const totalLow = items.filter(i => i.status === 'low').length;
 
+  const shoppingItems = items.filter(i => i.status === 'out' || i.status === 'low');
+  const shoppingByLocation = LOCATIONS.map(loc => ({
+    ...loc,
+    items: shoppingItems
+      .filter(i => i.location === loc.key)
+      .sort((a, b) => a._order - b._order),
+  })).filter(loc => loc.items.length > 0);
+  const whatsappHref = `https://wa.me/?text=${encodeURIComponent(
+    `Shopping list: ${shoppingItems.map(i => i.name).join(', ')}`
+  )}`;
+
   return (
     <div className="flex min-h-screen flex-col pb-20">
       {/* Header */}
@@ -154,6 +165,48 @@ export default async function DashboardPage() {
             </section>
           );
         })}
+
+        {shoppingItems.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-white/40">
+                🛒 Shopping List
+              </h2>
+              <a
+                href={whatsappHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold text-status-ok hover:text-status-ok/80 transition-colors"
+              >
+                Copy list
+              </a>
+            </div>
+            <div className="space-y-4">
+              {shoppingByLocation.map(loc => (
+                <div key={loc.key}>
+                  <div className="text-xs text-white/30 mb-2">{loc.emoji} {loc.label}</div>
+                  <div className="space-y-2">
+                    {loc.items.map(item => {
+                      const badge = statusBadge(item.status);
+                      return (
+                        <div
+                          key={item.id}
+                          className="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.04] px-4 py-3"
+                        >
+                          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${badge.dot}`} />
+                          <div className="flex-1 min-w-0 font-semibold text-base leading-tight truncate">
+                            {item.name}
+                          </div>
+                          <div className={`shrink-0 text-sm font-medium ${badge.text}`}>{badge.label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       <Nav active="stock" />
