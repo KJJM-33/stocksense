@@ -233,6 +233,43 @@ $$;
 
 grant execute on function record_tap(uuid, text, text, text) to anon, authenticated;
 
+-- ─── PASSIVE EXPIRY (pg_cron — enable in Supabase dashboard) ───────────────
+-- Finds items past their expiry_date that aren't already marked 'out',
+-- marks them 'out', and logs a 'waste' transaction for each so the waste
+-- shows up in history same as a manual consumption/adjustment would.
+-- Requires the pg_cron extension, which is NOT enabled by this file —
+-- see the review-queue item for the exact dashboard step.
+
+create or replace function expire_stale_items()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_item record;
+begin
+  for v_item in
+    select id, household_id
+    from items
+    where expiry_date is not null
+      and expiry_date < current_date
+      and status != 'out'
+  loop
+    update items
+    set status = 'out', last_updated = now()
+    where id = v_item.id;
+
+    insert into transactions (household_id, item_id, type, source, note)
+    values (v_item.household_id, v_item.id, 'waste', 'system', 'auto-marked out: past expiry_date');
+  end loop;
+end;
+$$;
+
+-- Not run automatically until pg_cron is enabled and the schedule below is
+-- registered — see the review-queue item for the one-time dashboard step.
+-- select cron.schedule('expire-stale-items-daily', '0 3 * * *', 'select expire_stale_items()');
+
 -- ─── One-time setup for personal (Phase 1) use ─────────────────────────────
 -- Run once after applying the schema, then put the returned household id in
 -- NEXT_PUBLIC_DEFAULT_HOUSEHOLD_ID (see .env.example). Phase 2 (beta, multiple
