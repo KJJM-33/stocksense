@@ -20,9 +20,9 @@ function statusBadge(status: string) {
   return                       { dot: 'bg-status-ok',  label: 'Good',     text: 'text-status-ok'  };
 }
 
-function expiryLabel(useByDate: string | null) {
-  if (!useByDate) return null;
-  const days = Math.ceil((new Date(useByDate).getTime() - Date.now()) / 86_400_000);
+function expiryLabel(expiryDate: string | null) {
+  if (!expiryDate) return null;
+  const days = Math.ceil((new Date(expiryDate).getTime() - Date.now()) / 86_400_000);
   if (days < 0)  return { text: 'Expired',         cls: 'text-status-out' };
   if (days === 0) return { text: 'Expires today',  cls: 'text-status-out' };
   if (days === 1) return { text: 'Tomorrow',       cls: 'text-status-out' };
@@ -40,7 +40,7 @@ export default async function DashboardPage() {
 
   const { data, error } = await supabase
     .from('items')
-    .select('id, name, status, location, quantity, use_by_date, confidence_level, last_confirmed_at')
+    .select('id, name, status, location, quantity, expiry_date, confidence_level, last_confirmed_at')
     .eq('household_id', HOUSEHOLD_ID)
     .order('name');
 
@@ -70,6 +70,18 @@ export default async function DashboardPage() {
   const whatsappHref = `https://wa.me/?text=${encodeURIComponent(
     `Shopping list: ${shoppingItems.map(i => i.name).join(', ')}`
   )}`;
+
+  const expiringItems = items.filter(i => {
+    if (i.status === 'out' || !i.expiry_date) return false;
+    const days = Math.ceil((new Date(i.expiry_date).getTime() - Date.now()) / 86_400_000);
+    return days <= 3;
+  });
+  const expiringByLocation = LOCATIONS.map(loc => ({
+    ...loc,
+    items: expiringItems
+      .filter(i => i.location === loc.key)
+      .sort((a, b) => new Date(a.expiry_date!).getTime() - new Date(b.expiry_date!).getTime()),
+  })).filter(loc => loc.items.length > 0);
 
   return (
     <div className="flex min-h-screen flex-col pb-20">
@@ -139,7 +151,7 @@ export default async function DashboardPage() {
                 <div className="space-y-2">
                   {locationItems.map(item => {
                     const badge = statusBadge(item.status);
-                    const expiry = expiryLabel(item.use_by_date);
+                    const expiry = expiryLabel(item.expiry_date);
                     return (
                       <div
                         key={item.id}
@@ -165,6 +177,43 @@ export default async function DashboardPage() {
             </section>
           );
         })}
+
+        {expiringItems.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-white/40">
+                ⏰ Expiring Soon
+              </h2>
+            </div>
+            <div className="space-y-4">
+              {expiringByLocation.map(loc => (
+                <div key={loc.key}>
+                  <div className="text-xs text-white/30 mb-2">{loc.emoji} {loc.label}</div>
+                  <div className="space-y-2">
+                    {loc.items.map(item => {
+                      const expiry = expiryLabel(item.expiry_date);
+                      return (
+                        <div
+                          key={item.id}
+                          className="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.04] px-4 py-3"
+                        >
+                          <div className="flex-1 min-w-0 font-semibold text-base leading-tight truncate">
+                            {item.name}
+                          </div>
+                          {expiry && (
+                            <div className={`shrink-0 text-xs font-medium tabular-nums ${expiry.cls}`}>
+                              {expiry.text}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {shoppingItems.length > 0 && (
           <section>
