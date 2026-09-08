@@ -82,6 +82,11 @@ export default async function DashboardPage() {
       .filter(i => i.location === loc.key)
       .sort((a, b) => new Date(a.expiry_date!).getTime() - new Date(b.expiry_date!).getTime()),
   })).filter(loc => loc.items.length > 0);
+  const expiringWhatsappHref = `https://wa.me/?text=${encodeURIComponent(
+    `Expiring soon: ${expiringItems
+      .map(i => `${i.name} (${expiryLabel(i.expiry_date)?.text})`)
+      .join(', ')}`
+  )}`;
 
   return (
     <div className="flex min-h-screen flex-col pb-20">
@@ -184,6 +189,14 @@ export default async function DashboardPage() {
               <h2 className="text-xs font-bold uppercase tracking-widest text-white/40">
                 ⏰ Expiring Soon
               </h2>
+              <a
+                href={expiringWhatsappHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold text-status-ok hover:text-status-ok/80 transition-colors"
+              >
+                Copy list
+              </a>
             </div>
             <div className="space-y-4">
               {expiringByLocation.map(loc => (
