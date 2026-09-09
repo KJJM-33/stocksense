@@ -1,5 +1,5 @@
-const CACHE_NAME = "stocksense-v1";
-const PRECACHE_URLS = ["/", "/tap"];
+const CACHE_NAME = "stocksense-v2";
+const PRECACHE_URLS = ["/", "/tap", "/dashboard"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
