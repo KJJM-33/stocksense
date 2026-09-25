@@ -10,11 +10,11 @@ Goal: replace "open the fridge and guess" with a system that's actually faster t
 - [x] `/tap` and `/tap/[location]` — sub-5-second, no-login stock update
 - [ ] Initial stock scan (camera → Claude vision → confirm → opening stock)
 - [ ] Inventory dashboard (traffic-light status, grouped by location, search)
-- [ ] Passive consumption logic (daily expiry sweep → auto Out + waste transaction)
-- [ ] Expiry alerts (grouped, push + WhatsApp)
+- [x] Passive consumption logic (daily expiry sweep → auto Out + waste transaction) — `expire_stale_items()` via pg_cron
+- [ ] Expiry alerts (grouped, push + WhatsApp) — in-app Expiring Soon section + WhatsApp copy link done; push/automatic alerts pending
 - [ ] WhatsApp/SMS intelligence layer (receipt photo, NL query, NL update, Sunday check-in)
 - [ ] Receipt scanning with fuzzy-match against known items + UK supermarket naming
-- [ ] PWA installable on iOS/Android, offline inventory view
+- [x] PWA installable on iOS/Android, offline inventory view — offline precache of `/`, `/tap`, `/dashboard`; install prompt still to verify on a real device
 
 **Exit criteria:** the NFC tags are on the doors, used daily without thinking about it, and the dashboard is trusted enough that a physical fridge check becomes unnecessary for "what's in there."
 

@@ -63,21 +63,21 @@ Tracks what's actually built vs planned. Update this whenever a feature moves st
 | Grouped by location (fridge/freezer/cupboard) | ⬜ | |
 | Traffic-light status | ⬜ | |
 | Expiry warnings highlighted | ⬜ | |
-| Auto-generated shopping list from Low/Out | ⬜ | |
-| One-tap send shopping list to WhatsApp | ⬜ | |
+| Auto-generated shopping list from Low/Out | ✅ | Dashboard shopping list section (`app/dashboard/page.tsx`) — Out/Low items grouped by location |
+| One-tap send shopping list to WhatsApp | ✅ | `wa.me` deep-link share button on the shopping list section |
 | Prominent search bar | ⬜ | |
 
 ## Passive logic & alerts
 
 | Feature | Status | Notes |
 |---|---|---|
-| Daily expiry sweep (auto-mark Out + waste transaction) | ⬜ | Supabase scheduled function |
-| Expiry alerts (push + WhatsApp, grouped) | ⬜ | |
+| Daily expiry sweep (auto-mark Out + waste transaction) | ✅ | `expire_stale_items()` in `supabase/schema.sql`, scheduled daily 03:00 via pg_cron (enabled 2026-09-24) |
+| Expiry alerts (push + WhatsApp, grouped) | 🚧 | In-app only: dashboard Expiring Soon section (≤3 days, grouped by location) + WhatsApp copy-list link. No push or automatic WhatsApp alert yet |
 
 ## PWA
 
 | Feature | Status | Notes |
 |---|---|---|
 | `manifest.json` | ✅ | |
-| Service worker — offline inventory view | ⬜ | Inventory dashboard not built yet, so offline caching has nothing to cache |
+| Service worker — offline inventory view | ✅ | `public/sw.js` — network-first with cache fallback; precaches `/`, `/tap`, `/dashboard` |
 | iOS/Android installable | ✅ | Manifest + icons in place; verify install prompt once dashboard exists |
