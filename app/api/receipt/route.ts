@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { extractBase64 } from '@/lib/imageDataUrl';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -20,16 +21,27 @@ Receipt:`;
 
 export async function POST(req: NextRequest) {
   try {
-    const { text } = (await req.json()) as { text?: string };
-    if (!text?.trim()) return NextResponse.json({ error: 'text is required' }, { status: 400 });
+    // Accepts either pasted receipt text or a receipt photo (base64 data URL).
+    const { text, image } = (await req.json()) as { text?: string; image?: string };
+    if (!text?.trim() && !image) {
+      return NextResponse.json({ error: 'text or image is required' }, { status: 400 });
+    }
+
+    let content: Anthropic.MessageParam['content'];
+    if (image) {
+      const { data, mediaType } = extractBase64(image);
+      content = [
+        { type: 'image', source: { type: 'base64', media_type: mediaType, data } },
+        { type: 'text', text: `${EXTRACT_PROMPT} (see photo above)` },
+      ];
+    } else {
+      content = `${EXTRACT_PROMPT}\n\n${text!.slice(0, 6000)}`;
+    }
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
-      messages: [{
-        role: 'user',
-        content: `${EXTRACT_PROMPT}\n\n${text.slice(0, 6000)}`,
-      }],
+      messages: [{ role: 'user', content }],
     });
 
     const raw = response.content.find(b => b.type === 'text')?.text ?? '[]';

@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { extractBase64 } from '@/lib/imageDataUrl';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -25,19 +26,6 @@ Rules:
 - confidence: "high" if clearly identifiable, "medium" if partially visible, "low" if uncertain
 - Only include items you can identify with reasonable confidence
 - Ignore packaging you cannot read or items too small to identify`;
-
-type ImageMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
-
-function extractBase64(dataUrl: string): { data: string; mediaType: ImageMediaType } {
-  const match = dataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
-  if (!match) throw new Error('Invalid image data URL');
-  const mimeType = match[1];
-  const validTypes: ImageMediaType[] = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (!validTypes.includes(mimeType as ImageMediaType)) {
-    throw new Error(`Unsupported image type: ${mimeType}. Use JPEG, PNG, GIF, or WebP.`);
-  }
-  return { data: match[2], mediaType: mimeType as ImageMediaType };
-}
 
 export async function POST(req: NextRequest) {
   try {

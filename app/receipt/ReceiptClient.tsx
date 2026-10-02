@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 
 type Phase = "paste" | "parsing" | "review" | "saving" | "done" | "error";
@@ -21,15 +21,26 @@ export default function ReceiptClient() {
   const [text, setText] = useState("");
   const [items, setItems] = useState<ParsedItem[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  async function parseReceipt() {
-    if (!text.trim()) return;
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      await parseReceipt({ image: ev.target?.result as string });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function parseReceipt(body: { text: string } | { image: string }) {
     setPhase("parsing");
     try {
       const res = await fetch("/api/receipt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Parse failed");
       const { items: found } = await res.json() as { items: ParsedItem[] };
@@ -125,7 +136,7 @@ export default function ReceiptClient() {
         <div className="flex-1 px-4 py-4 space-y-2">
           {items.length === 0 && (
             <div className="py-12 text-center text-white/30 text-sm">
-              No grocery items found — paste more of the receipt text.
+              No grocery items found — paste more of the receipt text or try a clearer photo.
             </div>
           )}
           {items.map((item, i) => (
@@ -184,12 +195,29 @@ export default function ReceiptClient() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="text-2xl font-bold">Paste receipt</div>
-          <div className="text-sm text-white/40 mt-0.5">Copy text from your email and paste below</div>
+          <div className="text-sm text-white/40 mt-0.5">Snap a paper receipt or paste text from your email</div>
         </div>
         <Link href="/dashboard" className="text-sm text-white/40 hover:text-white/70 transition-colors">
           Cancel
         </Link>
       </div>
+
+      <button
+        onClick={() => fileRef.current?.click()}
+        className="mb-3 flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-white/15 py-5 hover:border-white/25 hover:bg-white/[0.02] transition-all"
+      >
+        <span className="text-2xl">📷</span>
+        <span className="text-base font-semibold">Photo of receipt</span>
+      </button>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        onChange={handleFile}
+      />
 
       <div className="mb-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-white/40 leading-relaxed">
         <span className="font-semibold text-white/60">How to paste:</span> Open the receipt email → select all text → copy → paste here.
@@ -206,7 +234,7 @@ export default function ReceiptClient() {
 
       <button
         disabled={!text.trim()}
-        onClick={parseReceipt}
+        onClick={() => text.trim() && parseReceipt({ text })}
         className="mt-4 w-full rounded-2xl bg-status-ok py-4 text-base font-bold text-black disabled:opacity-30 transition-opacity"
       >
         Extract items
