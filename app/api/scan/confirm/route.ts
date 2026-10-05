@@ -2,14 +2,16 @@
  * POST /api/scan/confirm
  *
  * Receives the user-reviewed list of scanned items and upserts them all into
- * Supabase as opening stock. Items are matched by (household, name, location)
- * case-insensitively — existing items have their quantity and status updated,
- * new items are created with confidence_level = 'high' (user confirmed).
+ * Supabase as opening stock. Items are matched by (household, location) plus a
+ * normalised name (see lib/engine/itemMatch.ts — ignores retailer names, pack sizes,
+ * case, punctuation and plurals) — existing items have their quantity and status
+ * updated, new items are created with confidence_level = 'high' (user confirmed).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getCategoryDefaults } from '@/lib/engine/categories';
+import { findMatchingItem } from '@/lib/engine/itemMatch';
 
 const HOUSEHOLD_ID = process.env.NEXT_PUBLIC_DEFAULT_HOUSEHOLD_ID!;
 
@@ -39,19 +41,19 @@ export async function POST(req: NextRequest) {
     const now = new Date().toISOString();
     const results: { name: string; id: string; action: 'created' | 'updated' }[] = [];
 
+    const { data: existingRows, error: fetchError } = await supabase
+      .from('items')
+      .select('id, name, location')
+      .eq('household_id', HOUSEHOLD_ID);
+    if (fetchError) throw new Error(fetchError.message);
+    const known: { id: string; name: string; location: string | null }[] = existingRows ?? [];
+
     for (const item of items) {
       const name = item.name?.trim();
       const loc = item.location ?? 'fridge';
       if (!name) continue;
 
-      // Find existing
-      const { data: existing } = await supabase
-        .from('items')
-        .select('id')
-        .eq('household_id', HOUSEHOLD_ID)
-        .ilike('name', name)
-        .eq('location', loc)
-        .maybeSingle();
+      const existing = findMatchingItem(name, loc, known);
 
       if (existing) {
         // Update quantity, status, confidence
@@ -82,6 +84,7 @@ export async function POST(req: NextRequest) {
         }).select('id').single();
 
         if (!error && newRow) {
+          known.push({ id: newRow.id, name, location: loc });
           results.push({ name, id: newRow.id, action: 'created' });
         }
       }

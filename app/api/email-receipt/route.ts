@@ -19,6 +19,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import { findMatchingItem } from '@/lib/engine/itemMatch';
 
 const HOUSEHOLD_ID = process.env.NEXT_PUBLIC_DEFAULT_HOUSEHOLD_ID!;
 
@@ -116,28 +117,31 @@ export async function POST(req: NextRequest) {
     const now = new Date().toISOString();
     const upserted: string[] = [];
 
+    const { data: existingRows, error: fetchError } = await supabase
+      .from('items')
+      .select('id, name, location, quantity')
+      .eq('household_id', HOUSEHOLD_ID);
+    if (fetchError) throw new Error(fetchError.message);
+    const known: { id: string; name: string; location: string | null; quantity: number }[] =
+      existingRows ?? [];
+
     for (const item of items) {
       const name = item.name?.trim();
       if (!name) continue;
       const loc = item.location ?? 'cupboard';
 
-      const { data: existing } = await supabase
-        .from('items')
-        .select('id, quantity')
-        .eq('household_id', HOUSEHOLD_ID)
-        .ilike('name', name)
-        .eq('location', loc)
-        .maybeSingle();
+      const existing = findMatchingItem(name, loc, known);
 
       if (existing) {
+        existing.quantity += item.quantity ?? 1;
         await supabase.from('items').update({
-          quantity: existing.quantity + (item.quantity ?? 1),
+          quantity: existing.quantity,
           status: 'ok',
           confidence_level: 'high',
           last_confirmed_at: now,
         }).eq('id', existing.id);
       } else {
-        await supabase.from('items').insert({
+        const { data: newRow } = await supabase.from('items').insert({
           household_id: HOUSEHOLD_ID,
           name,
           category: 'uncategorised',
@@ -149,7 +153,8 @@ export async function POST(req: NextRequest) {
           confidence_level: 'high',
           last_confirmed_at: now,
           last_inferred_at: now,
-        });
+        }).select('id').single();
+        if (newRow) known.push({ id: newRow.id, name, location: loc, quantity: item.quantity ?? 1 });
       }
       upserted.push(name);
     }
