@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import Nav from '@/components/Nav';
+import { searchTerms, matchesSearch } from '@/lib/engine/itemSearch';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,16 @@ function expiryLabel(expiryDate: string | null) {
   return                  { text: `${days}d`,      cls: 'text-white/30'   };
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const rawQuery = (await searchParams).q;
+  const query = typeof rawQuery === 'string' ? rawQuery.trim() : '';
+  const terms = searchTerms(query);
+  const searching = terms.length > 0;
+
   const supabase = createClient(
     process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -56,6 +66,8 @@ export default async function DashboardPage() {
     ...i,
     _order: STATUS_ORDER[i.status] ?? 3,
   }));
+
+  const searchMatches = items.filter(i => matchesSearch(i.name, terms));
 
   const totalOut = items.filter(i => i.status === 'out').length;
   const totalLow = items.filter(i => i.status === 'low').length;
@@ -111,6 +123,33 @@ export default async function DashboardPage() {
 
       {/* Body */}
       <main className="flex-1 px-4 py-6 space-y-8">
+        {items.length > 0 && (
+          <form action="/dashboard" method="get" role="search" className="flex items-center gap-2">
+            <input
+              type="search"
+              name="q"
+              defaultValue={query}
+              placeholder="Search stock…"
+              aria-label="Search stock"
+              className="flex-1 min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-base placeholder:text-white/30 focus:border-white/25 focus:outline-none"
+            />
+            {searching && (
+              <Link
+                href="/dashboard"
+                className="shrink-0 rounded-xl px-3 py-2 text-sm font-semibold text-white/40 hover:text-white/70 transition-colors"
+              >
+                Clear
+              </Link>
+            )}
+          </form>
+        )}
+
+        {searching && items.length > 0 && searchMatches.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-white/10 px-5 py-8 text-center text-sm text-white/40">
+            No items match &ldquo;{query}&rdquo;
+          </div>
+        )}
+
         {items.length === 0 && (
           <div className="flex flex-col items-center justify-center py-24 text-center px-6">
             <div className="text-6xl mb-5">📦</div>
@@ -130,9 +169,12 @@ export default async function DashboardPage() {
         )}
 
         {LOCATIONS.map(({ key, label, emoji }) => {
-          const locationItems = items
+          const locationItems = searchMatches
             .filter(i => i.location === key)
             .sort((a, b) => a._order - b._order);
+
+          // While searching, only show locations that have a match
+          if (searching && locationItems.length === 0) return null;
 
           return (
             <section key={key}>
